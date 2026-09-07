@@ -12,7 +12,7 @@
 locals {
   # Staging is served by the PROD gateway, because staging environments live in
   # the application's production project. Keep in sync with `gateway_members` in
-  # the gateway's locals.tf.
+  # locals.tf in bcc-code/bcc-platform-gateway.
   tier = contains(["prod", "staging"], var.environment) ? "prod" : "sandbox"
 
   # Constants rather than an input: there is exactly one gateway per tier. Keep
@@ -33,6 +33,10 @@ resource "google_compute_backend_bucket" "main" {
   name        = local.backend_bucket_name
   bucket_name = var.bucket
   enable_cdn  = var.enable_cdn
+
+  # Dynamic compression is a Cloud CDN feature: with enable_cdn = false the API
+  # accepts this and nothing is ever compressed.
+  compression_mode = var.compression_mode
 }
 
 # Lets the gateway's URL map reference the backend bucket. Project-scoped

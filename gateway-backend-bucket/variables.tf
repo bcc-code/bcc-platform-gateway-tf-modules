@@ -50,6 +50,29 @@ variable "grant_object_access" {
   DESC
 }
 
+variable "compression_mode" {
+  type        = string
+  default     = "AUTOMATIC"
+  description = <<-DESC
+    Dynamic compression of text responses, using Brotli or gzip according to the
+    client's Accept-Encoding: "AUTOMATIC" or "DISABLED".
+
+    Takes effect only with enable_cdn = true: compression is a Cloud CDN
+    feature, and with the CDN off the setting is accepted but does nothing.
+
+    AUTOMATIC suits the HTML/CSS/JS this module is usually pointed at. Only
+    responses between 1 KiB and 10 MiB are compressed, and one that already has
+    a Content-Encoding header is left alone. Set DISABLED for a bucket serving
+    large media: a compressed response is served with Accept-Ranges: none, and
+    cache hits for it ignore Range headers.
+  DESC
+
+  validation {
+    condition     = contains(["AUTOMATIC", "DISABLED"], var.compression_mode)
+    error_message = "compression_mode must be one of: AUTOMATIC, DISABLED."
+  }
+}
+
 variable "enable_cdn" {
   type        = bool
   default     = false
