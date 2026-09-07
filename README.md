@@ -17,7 +17,7 @@ name.
 
 ```hcl
 module "gateway_backend" {
-  source = "github.com/bcc-code/bcc-platform-gateway//modules/gateway-backend?ref=main"
+  source = "github.com/bcc-code/bcc-platform-gateway-tf-modules//gateway-backend?ref=main"
 
   app         = "members"
   component   = "api"
@@ -56,7 +56,7 @@ and `app_environment` is already one of the four values the module accepts.
 
 ```hcl
 module "gateway_backend_ui" {
-  source = "github.com/bcc-code/bcc-platform-gateway//modules/gateway-backend-bucket?ref=main"
+  source = "github.com/bcc-code/bcc-platform-gateway-tf-modules//gateway-backend-bucket?ref=main"
 
   app         = "members"
   component   = "ui"
@@ -111,8 +111,9 @@ output to wire up and no state dependency between the repos:
 | gateway-backend-bucket | `bb-<app>-<component>-<env>` | `projects/<project>/global/backendBuckets/bb-…`  |
 
 So `app`, `component` and the environment must match the `app` field, backend key
-and environment in `routes/<app>.yaml`. The `route_registry_snippet` output
-prints the fragment to add there:
+and environment in `routes/<app>.yaml` in
+[bcc-code/bcc-platform-gateway](https://github.com/bcc-code/bcc-platform-gateway).
+The `route_registry_snippet` output prints the fragment to add there:
 
 ```yaml
 app: members
@@ -128,9 +129,11 @@ backends:
     type: backend_bucket
 ```
 
-**Apply this repo before that gateway PR merges.** A URL map cannot reference a
+**Apply your repo before that gateway PR merges.** A URL map cannot reference a
 backend that does not exist, and the gateway's plan fails on it. Renaming or
 destroying a published backend is likewise coordinated: remove the route from the
-gateway first, then the module here. See
-[../routes/README.md](../routes/README.md) for the registry schema and
-[../MIGRATION.md](../MIGRATION.md) for how applications are being onboarded.
+gateway first, then the module here. In the gateway repo, see
+[routes/README.md](https://github.com/bcc-code/bcc-platform-gateway/blob/main/routes/README.md)
+for the registry schema and
+[MIGRATION.md](https://github.com/bcc-code/bcc-platform-gateway/blob/main/MIGRATION.md)
+for how applications are being onboarded.

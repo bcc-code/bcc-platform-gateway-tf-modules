@@ -11,7 +11,7 @@
 locals {
   # Staging is served by the PROD gateway, because staging environments live in
   # the application's production project. Keep in sync with `gateway_members` in
-  # the gateway's locals.tf.
+  # locals.tf in bcc-code/bcc-platform-gateway.
   tier = contains(["prod", "staging"], var.environment) ? "prod" : "sandbox"
 
   # Constants rather than an input: there is exactly one gateway per tier. Keep
