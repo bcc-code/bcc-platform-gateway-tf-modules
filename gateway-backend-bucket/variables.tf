@@ -75,6 +75,6 @@ variable "compression_mode" {
 
 variable "enable_cdn" {
   type        = bool
-  default     = false
+  default     = true
   description = "Enable Cloud CDN on this backend bucket."
 }
