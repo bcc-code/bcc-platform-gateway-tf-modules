@@ -53,7 +53,8 @@ resource "google_compute_backend_service" "main" {
   enable_cdn      = var.enable_cdn
   security_policy = var.security_policy
 
-  custom_request_headers = var.custom_request_headers
+  custom_request_headers  = var.custom_request_headers
+  custom_response_headers = var.custom_response_headers
 
   backend {
     group = google_compute_region_network_endpoint_group.main.id

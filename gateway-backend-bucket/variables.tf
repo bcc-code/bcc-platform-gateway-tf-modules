@@ -78,3 +78,14 @@ variable "enable_cdn" {
   default     = true
   description = "Enable Cloud CDN on this backend bucket."
 }
+
+variable "custom_response_headers" {
+  type        = list(string)
+  default     = []
+  description = "Extra response headers to add, as \"Name: value\" (e.g. \"X-Cache-Status: {cdn_cache_status}\")."
+
+  validation {
+    condition     = alltrue([for h in var.custom_response_headers : can(regex("^[!#$%&'*+.^_`|~0-9A-Za-z-]+:", h))])
+    error_message = "Each entry in custom_response_headers must be \"Name: value\"."
+  }
+}

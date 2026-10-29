@@ -73,6 +73,32 @@ project's load balancer service agent `roles/storage.objectViewer`. Where the
 site lives _inside_ the bucket is a route concern: a bundle under `/ui/` is
 handled by `path_prefix_rewrite: "/ui/"` on the gateway route.
 
+## Custom headers
+
+Both modules take `custom_response_headers`, added by the load balancer to every
+response from the backend, and `gateway-backend` also takes
+`custom_request_headers`, added to every request it forwards to Cloud Run. Each
+entry is `"Name: value"`, and values may use the load balancer's header
+variables:
+
+```hcl
+module "gateway_backend" {
+  # ...
+  custom_request_headers = [
+    "X-Client-Region: {client_region}",
+  ]
+  custom_response_headers = [
+    "Strict-Transport-Security: max-age=31536000",
+    "X-Frame-Options: DENY",
+  ]
+}
+```
+
+- **No request headers for a bucket.** A backend bucket, unlike a backend
+  service, cannot add headers to the request it sends to Cloud Storage.
+- **Do not rewrite `Host`.** Cloud Run needs the original host to match its
+  custom domain.
+
 ## What you don't pass
 
 - **The gateway's service accounts.** One gateway per tier, so the two service

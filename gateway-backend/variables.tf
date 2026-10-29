@@ -63,5 +63,21 @@ variable "enable_cdn" {
 variable "custom_request_headers" {
   type        = list(string)
   default     = []
-  description = "Extra request headers to add. Do not rewrite Host: Cloud Run needs the original host to match its custom domain."
+  description = "Extra request headers to add, as \"Name: value\" (e.g. \"X-Client-Region: {client_region}\"). Do not rewrite Host: Cloud Run needs the original host to match its custom domain."
+
+  validation {
+    condition     = alltrue([for h in var.custom_request_headers : can(regex("^[!#$%&'*+.^_`|~0-9A-Za-z-]+:", h))])
+    error_message = "Each entry in custom_request_headers must be \"Name: value\"."
+  }
+}
+
+variable "custom_response_headers" {
+  type        = list(string)
+  default     = []
+  description = "Extra response headers to add, as \"Name: value\" (e.g. \"X-Frame-Options: DENY\")."
+
+  validation {
+    condition     = alltrue([for h in var.custom_response_headers : can(regex("^[!#$%&'*+.^_`|~0-9A-Za-z-]+:", h))])
+    error_message = "Each entry in custom_response_headers must be \"Name: value\"."
+  }
 }

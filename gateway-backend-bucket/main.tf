@@ -37,6 +37,8 @@ resource "google_compute_backend_bucket" "main" {
   # Dynamic compression is a Cloud CDN feature: with enable_cdn = false the API
   # accepts this and nothing is ever compressed.
   compression_mode = var.compression_mode
+
+  custom_response_headers = var.custom_response_headers
 }
 
 # Lets the gateway's URL map reference the backend bucket. Project-scoped
