@@ -1,16 +1,18 @@
 # Publishing a backend to the shared gateway
 
-Two modules, both applied **in your own repo and project**, never in the
+Three modules, all applied **in your own repo and project**, never in the
 gateway's:
 
 | What you want routed                   | Module                                           |
 | -------------------------------------- | ------------------------------------------------ |
 | a Cloud Run service                    | [gateway-backend](gateway-backend)               |
 | a GCS bucket (static site, SPA bundle) | [gateway-backend-bucket](gateway-backend-bucket) |
+| Compute Engine VMs                     | [gateway-backend-vm](gateway-backend-vm)         |
 
-Neither resource can be created by the gateway: a serverless NEG must sit in the
-same project as its Cloud Run service, and a backend bucket in the same project
-as its GCS bucket. The gateway references what you create, cross-project, by
+None of these resources can be created by the gateway: a serverless NEG must sit
+in the same project as its Cloud Run service, a backend bucket in the same
+project as its GCS bucket, and a backend service in the same project as its
+instance groups and health check. The gateway references what you create, cross-project, by
 name.
 
 ## Cloud Run
@@ -73,11 +75,65 @@ project's load balancer service agent `roles/storage.objectViewer`. Where the
 site lives _inside_ the bucket is a route concern: a bundle under `/ui/` is
 handled by `path_prefix_rewrite: "/ui/"` on the gateway route.
 
+## Compute Engine VMs
+
+The module takes instance groups, not VMs. A managed instance group passes its
+`instance_group`; standalone VMs go in an unmanaged group of your own, one per
+zone:
+
+```hcl
+resource "google_compute_instance_group" "worker" {
+  name      = "ig-members-worker"
+  zone      = google_compute_instance.worker.zone
+  instances = [google_compute_instance.worker.self_link]
+
+  named_port {
+    name = "http"
+    port = 8080
+  }
+}
+
+module "gateway_backend_worker" {
+  source = "github.com/bcc-code/bcc-platform-gateway-tf-modules//gateway-backend-vm?ref=main"
+
+  app         = "members"
+  component   = "worker"
+  environment = local.props.app_environment
+
+  instance_groups = [google_compute_instance_group.worker.self_link]
+  # or: [google_compute_region_instance_group_manager.worker.instance_group]
+
+  port = 8080
+  health_check = {
+    request_path = "/healthz"
+  }
+
+  firewall = {
+    network     = google_compute_network.main.self_link
+    target_tags = ["gateway-backend"]
+  }
+}
+```
+
+- **Named ports.** The backend service sends traffic to the named port
+  `port_name` (default `http`), so every group must declare it. `port` is the
+  number it maps to, and is used only for the firewall rule.
+- **Open the firewall.** The gateway health-checks and proxies from Google's
+  front ends, `35.191.0.0/16` and `130.211.0.0/22`; without a rule admitting
+  them, every backend stays unhealthy and the gateway returns 502s. `firewall`
+  creates that rule — leave it null only if one already exists. With a Shared
+  VPC, set `firewall.project` to the host project.
+- **The health check must get a 200.** A redirect to HTTPS or a login page
+  counts as unhealthy, so point `request_path` at an endpoint that answers
+  plainly.
+- **One load-balanced group per VM.** A VM can't be in two.
+- The VMs need no external IP: the gateway reaches them over Google's network.
+
 ## Custom headers
 
-Both modules take `custom_response_headers`, added by the load balancer to every
-response from the backend, and `gateway-backend` also takes
-`custom_request_headers`, added to every request it forwards to Cloud Run. Each
+All modules take `custom_response_headers`, added by the load balancer to every
+response from the backend, and `gateway-backend` and `gateway-backend-vm` also
+take `custom_request_headers`, added to every request they forward. Each
 entry is `"Name: value"`, and values may use the load balancer's header
 variables:
 
@@ -135,6 +191,7 @@ output to wire up and no state dependency between the repos:
 | ---------------------- | ---------------------------- | ------------------------------------------------ |
 | gateway-backend        | `bs-<app>-<component>-<env>` | `projects/<project>/global/backendServices/bs-…` |
 | gateway-backend-bucket | `bb-<app>-<component>-<env>` | `projects/<project>/global/backendBuckets/bb-…`  |
+| gateway-backend-vm     | `bs-<app>-<component>-<env>` | `projects/<project>/global/backendServices/bs-…` |
 
 So `app`, `component` and the environment must match the `app` field, backend key
 and environment in `routes/<app>.yaml` in
@@ -153,6 +210,8 @@ backends:
     type: cloud_run
   ui:
     type: backend_bucket
+  worker:
+    type: vm
 ```
 
 **Apply your repo before that gateway PR merges.** A URL map cannot reference a
